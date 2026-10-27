@@ -39,7 +39,7 @@ app.post('/api/signup', (req, res) => {
         return res.status(400).json({ error: "Bu nömrə artıq qeydiyyatdan keçib! Zəhmət olmasa daxil olun." });
     }
 
-    users.push({ phone, password });
+    users.push({ phone, password, date: new Date().toISOString() });
     fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
 
     res.json({ success: true, message: "Qeydiyyat uğurla tamamlandı!" });
@@ -71,7 +71,23 @@ app.post('/api/login', (req, res) => {
     res.json({ success: true, message: "Giriş uğurludur!" });
 });
 
-// --- 3. PHOTON / NOMINATIM AXTARIŞ ENDPOINT-İ ---
+// --- 3. YENİ: ADMIN PANEL - QEYDİYYATDAN KEÇƏNLƏRİ GÖRMƏK ÜÇÜN ---
+app.get('/api/admin/users', (req, res) => {
+    try {
+        if (fs.existsSync(USERS_FILE)) {
+            const data = fs.readFileSync(USERS_FILE, 'utf8');
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.send(data);
+        } else {
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.send(JSON.stringify([]));
+        }
+    } catch (err) {
+        res.status(500).json({ error: "Məlumatları oxumaq mümkün olmadı" });
+    }
+});
+
+// --- 4. PHOTON / NOMINATIM AXTARIŞ ENDPOINT-İ ---
 app.get('/api/search', async (req, res) => {
     const query = req.query.q;
     if (!query || query.trim().length < 2) return res.json([]);
@@ -115,7 +131,7 @@ app.get('/api/search', async (req, res) => {
     }
 });
 
-// --- 4. OSRM REAL YOL MƏSAFƏSİ VƏ SÜRÜŞ MÜDDƏTİ ---
+// --- 5. OSRM REAL YOL MƏSAFƏSİ VƏ SÜRÜŞ MÜDDƏTİ ---
 async function getRouteData(startCoord, endCoord) {
     try {
         const url = `https://router.project-osrm.org/route/v1/driving/${startCoord.lon},${startCoord.lat};${endCoord.lon},${endCoord.lat}?overview=false`;
@@ -133,7 +149,7 @@ async function getRouteData(startCoord, endCoord) {
     }
 }
 
-// --- 5. RƏSMİ UKOME TARİFLƏRİNƏ ƏSASƏN QİYMƏT VƏ 2 AYRI VAXT ---
+// --- 6. RƏSMİ UKOME TARİFLƏRİNƏ ƏSASƏN QİYMƏT VƏ 2 AYRI VAXT ---
 function calculateTaxiPrices(distanceKm, tripDurationMinutes) {
     const dist = parseFloat(distanceKm);
     const tripTime = parseInt(tripDurationMinutes) || Math.round((dist / 30) * 60);
@@ -180,7 +196,7 @@ function calculateTaxiPrices(distanceKm, tripDurationMinutes) {
     };
 }
 
-// --- 6. MÜQAYİSƏ ENDPOINT-İ ---
+// --- 7. MÜQAYİSƏ ENDPOINT-İ ---
 app.post('/api/compare', async (req, res) => {
     const { startCoord, endCoord, pickupName, dropoffName } = req.body;
 
@@ -205,7 +221,7 @@ app.post('/api/compare', async (req, res) => {
     });
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server uğurla işləyir: http://localhost:${PORT}`);
 });
