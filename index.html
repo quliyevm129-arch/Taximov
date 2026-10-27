@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taksi Qiymət və Vaxt Müqayisəsi - Türkiyə</title>
+    <style>
+        * { 
+            box-sizing: border-box; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+        }
+
+        body { 
+            background: #121212;
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(255, 204, 0, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(255, 204, 0, 0.05) 0%, transparent 40%),
+                linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+            min-height: 100vh;
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Duman və Böyük Taksi Animasiyası */
+        .taxi-animation-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+            overflow: hidden;
+        }
+
+        .giant-smoke {
+            position: absolute;
+            top: 50%;
+            right: -600px;
+            transform: translateY(-50%);
+            width: 700px;
+            height: 350px;
+            background: rgba(255, 255, 255, 0.35);
+            border-radius: 50%;
+            filter: blur(60px);
+            animation: smokeMove 3.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        .anim-taxi-container {
+            position: absolute;
+            top: 50%;
+            right: -700px;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            animation: driveAcross 3.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+            animation-delay: 0.1s;
+        }
+
+        .anim-taxi {
+            font-size: 240px;
+            transform: scaleX(-1);
+            filter: drop-shadow(0 20px 35px rgba(0,0,0,0.8));
+        }
+
+        .smoke-trail {
+            width: 450px;
+            height: 100px;
+            background: linear-gradient(to left, rgba(255,255,255,0.7), transparent);
+            border-radius: 200px;
+            filter: blur(25px);
+            margin-left: -80px;
+        }
+
+        @keyframes smokeMove {
+            0% { right: -600px; opacity: 0; }
+            50% { opacity: 0.6; }
+            100% { right: 130%; opacity: 0; }
+        }
+
+        @keyframes driveAcross {
+            0% { right: -700px; }
+            100% { right: 130%; }
+        }
+
+        /* Mərkəzi Konteyner Kartı */
+        .container { 
+            width: 100%; 
+            max-width: 460px; 
+            background: #ffffff; 
+            color: #111;
+            padding: 28px; 
+            border-radius: 24px; 
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 204, 0, 0.2); 
+            position: relative;
+            z-index: 10;
+            border: 3px solid #ffcc00;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h2 { 
+            color: #111; 
+            font-size: 22px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .header p {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .page-view {
+            display: none;
+        }
+
+        .page-view.active {
+            display: block;
+        }
+
+        .input-group { 
+            margin-bottom: 16px; 
+            position: relative;
+        }
+
+        .input-with-icon {
+            display: flex;
+            gap: 8px;
+        }
+
+        label { 
+            font-size: 11px; 
+            font-weight: 700; 
+            color: #333; 
+            display: block; 
+            margin-bottom: 6px; 
+            text-transform: uppercase;
+        }
+
+        select, input { 
+            width: 100%; 
+            padding: 12px 14px; 
+            border: 2px solid #e2e8f0; 
+            border-radius: 12px; 
+            font-size: 14px; 
+            outline: none; 
+            transition: all 0.3s ease;
+            background: #f8fafc;
+            color: #111;
+        }
+
+        select {
+            width: 110px;
+            cursor: pointer;
+        }
+
+        input:focus, select:focus { 
+            border-color: #ffcc00; 
+            background: #fff;
+        }
+
+        .phone-container {
+            display: flex;
+            gap: 8px;
+        }
+
+        .suggestions-list {
+            position: absolute; 
+            top: 100%; 
+            left: 0; 
+            width: 100%; 
+            background: #ffffff;
+            border: 2px solid #ffcc00; 
+            border-radius: 12px; 
+            max-height: 200px; 
+            overflow-y: auto;
+            z-index: 99999; 
+            display: none; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            margin-top: 4px;
+        }
+
+        .suggestion-item {
+            padding: 12px 14px; 
+            font-size: 12px; 
+            color: #222; 
+            cursor: pointer; 
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.2s;
+        }
+
+        .suggestion-item:hover { 
+            background: #fef08a; 
+            font-weight: bold; 
+        }
+
+        .gps-btn {
+            background: #111; 
+            color: #ffcc00; 
+            border: none; 
+            border-radius: 12px; 
+            padding: 0 16px; 
+            cursor: pointer; 
+            font-size: 18px; 
+            font-weight: bold;
+        }
+
+        .gps-btn:hover { 
+            background: #333; 
+        }
+
+        button.submit-btn { 
+            width: 100%; 
+            padding: 16px; 
+            background: #ffcc00; 
+            color: #111; 
+            border: none; 
+            border-radius: 12px; 
+            font-size: 15px; 
+            font-weight: 800; 
+            cursor: pointer; 
+            text-transform: uppercase; 
+            margin-top: 6px; 
+            transition: 0.2s;
+            box-shadow: 0 4px 12px rgba(255, 204, 0, 0.4);
+        }
+
+        button.submit-btn:hover { 
+            background: #e6b800; 
+            transform: translateY(-1px); 
+        }
+
+        button.secondary-btn {
+            width: 100%; 
+            padding: 14px; 
+            background: #111; 
+            color: #ffcc00; 
+            border: none; 
+            border-radius: 12px; 
+            font-size: 14px; 
+            font-weight: 800; 
+            cursor: pointer; 
+            text-transform: uppercase; 
+            margin-top: 10px; 
+            transition: 0.2s;
+        }
+
+        button.secondary-btn:hover {
+            background: #333;
+        }
+
+        .results { 
+            margin-top: 18px; 
+        }
+
+        .card { 
+            background: #fff; 
+            border: 2px solid #e2e8f0; 
+            border-radius: 14px; 
+            padding: 14px; 
+            margin-bottom: 10px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .card:hover {
+            border-color: #cbd5e1;
+        }
+
+        .service-name { 
+            font-weight: 700; 
+            font-size: 15px; 
+            color: #111; 
+            display: flex; 
+            align-items: center; 
+            gap: 6px; 
+        }
+
+        .time-info { 
+            font-size: 11px; 
+            color: #475569; 
+            margin-top: 4px; 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 4px; 
+        }
+
+        .price { 
+            font-size: 18px; 
+            font-weight: 800; 
+            color: #111; 
+        }
+
+        .user-selected { 
+            border: 2.5px solid #2563eb !important; 
+            background: #eff6ff !important; 
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+        }
+
+        .cheapest-tag { 
+            font-size: 9px; 
+            background: #10b981; 
+            color: white; 
+            padding: 2px 6px; 
+            border-radius: 10px; 
+        }
+
+        .logout-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 100;
+        }
+
+        .logout-btn:hover { background: #dc2626; }
+
+        .error-msg {
+            color: #ef4444;
+            font-size: 12px;
+            text-align: center;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 12px;
+            font-size: 12px;
+            color: #666;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div class="taxi-animation-overlay">
+    <div class="giant-smoke"></div>
+    <div class="anim-taxi-container">
+        <div class="anim-taxi">🚕</div>
+        <div class="smoke-trail"></div>
+    </div>
+</div>
+
+<div class="container">
+
+    <!-- 1. GİRİŞ SEÇİMİ (WELCOME VIEW) -->
+    <div id="welcome-view" class="page-view">
+        <div class="header">
+            <h2>🚕 Taksi Müqayisə</h2>
+            <p>Ən ucuz və tez gələn taksini anında tapın</p>
+        </div>
+        <button class="submit-btn" onclick="showPage('login-view')">Daxil Ol (Login)</button>
+        <button class="secondary-btn" onclick="showPage('signup-view')">Qeydiyyatdan Keç (Sign Up)</button>
+    </div>
+
+    <!-- 2. LOGIN VIEW -->
+    <div id="login-view" class="page-view">
+        <div class="header">
+            <h2>🔑 Hesaba Giriş</h2>
+            <p>Nömrə və şifrənizi daxil edin</p>
+        </div>
+        <div class="input-group">
+            <label>Telefon Nömrəsi</label>
+            <div class="phone-container">
+                <select id="login-country">
+                    <option value="+994">🇦🇿 +994</option>
+                    <option value="+90" selected>🇹🇷 +90</option>
+                    <option value="+1">🇺🇸 +1</option>
+                    <option value="+44">🇬🇧 +44</option>
+                </select>
+                <input type="tel" id="login-phone" placeholder="555 123 4567">
+            </div>
+        </div>
+        <div class="input-group">
+            <label>Şifrə</label>
+            <input type="password" id="login-password" placeholder="Şifrənizi daxil edin">
+        </div>
+        <button class="submit-btn" onclick="handleLogin()">Daxil Ol</button>
+        <div id="login-error" class="error-msg"></div>
+        <span class="back-link" onclick="showPage('welcome-view')">← Geri qayıt</span>
+    </div>
+
+    <!-- 3. SIGNUP VIEW -->
+    <div id="signup-view" class="page-view">
+        <div class="header">
+            <h2>📝 Qeydiyyat</h2>
+            <p>Davam etmək üçün hesab yaradın</p>
+        </div>
+        <div class="input-group">
+            <label>Telefon Nömrəsi</label>
+            <div class="phone-container">
+                <select id="signup-country">
+                    <option value="+994">🇦🇿 +994</option>
+                    <option value="+90" selected>🇹🇷 +90</option>
+                    <option value="+1">🇺🇸 +1</option>
+                    <option value="+44">🇬🇧 +44</option>
+                </select>
+                <input type="tel" id="signup-phone" placeholder="555 123 4567">
+            </div>
+        </div>
+        <div class="input-group">
+            <label>Şifrə (Ən azı 8 simvol)</label>
+            <input type="password" id="signup-password" placeholder="Şifrə təyin edin (min 8 simvol)">
+        </div>
+        <button class="submit-btn" onclick="handleSignUp()">Qeydiyyatı Tamamla</button>
+        <div id="signup-error" class="error-msg"></div>
+        <span class="back-link" onclick="showPage('welcome-view')">← Geri qayıt</span>
+    </div>
+
+    <!-- 4. MAIN COMPARISON VIEW -->
+    <div id="comparison-view" class="page-view">
+        <button class="logout-btn" onclick="logout()">Çıxış</button>
+        <div class="header">
+            <h2>🚕 Taksi Müqayisə</h2>
+            <p>Ən ucuz və tez gələn taksini anında tapın</p>
+        </div>
+        
+        <div class="input-group">
+            <label>📍 Haradan (Məkanınız)</label>
+            <div class="input-with-icon">
+                <input type="text" id="pickup" placeholder="Ünvan və ya məkan yazın..." oninput="searchLocation('pickup')">
+                <button class="gps-btn" onclick="getCurrentLocation()" title="Cari Konum">📍</button>
+            </div>
+            <div id="pickup-suggestions" class="suggestions-list"></div>
+        </div>
+        
+        <div class="input-group">
+            <label>🏁 Haraya</label>
+            <input type="text" id="dropoff" placeholder="Məs: Bedirhan Market, Kadıköy Boğa..." oninput="searchLocation('dropoff')">
+            <div id="dropoff-suggestions" class="suggestions-list"></div>
+        </div>
+
+        <button class="submit-btn" onclick="comparePrices()">Qiymətləri Müqayisə Et</button>
+
+        <div class="results" id="results"></div>
+    </div>
+
+</div>
+
+<script>
+    let pickupCoords = null;
+    let dropoffCoords = null;
+    let searchTimeout = null;
+    let selectedServiceKey = null;
+
+    window.onload = function() {
+        if (localStorage.getItem('taxi_user')) {
+            showPage('comparison-view');
+            getCurrentLocation();
+        } else {
+            showPage('welcome-view');
+        }
+    };
+
+    function showPage(pageId) {
+        document.querySelectorAll('.page-view').forEach(view => view.classList.remove('active'));
+        document.getElementById(pageId).classList.add('active');
+    }
+
+    function logout() {
+        localStorage.removeItem('taxi_user');
+        showPage('welcome-view');
+    }
+
+    async function handleLogin() {
+        const country = document.getElementById('login-country').value;
+        const phone = document.getElementById('login-phone').value.trim();
+        const password = document.getElementById('login-password').value.trim();
+        const errorDiv = document.getElementById('login-error');
+
+        if (!phone || !password) {
+            errorDiv.innerText = "Zəhmət olmasa xanaları tam doldurun!";
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: country + phone, password })
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                errorDiv.innerText = data.error || "Giriş xətası!";
+                return;
+            }
+
+            localStorage.setItem('taxi_user', country + phone);
+            showPage('comparison-view');
+            getCurrentLocation();
+        } catch (err) {
+            errorDiv.innerText = "Serverlə əlaqə qurulmadı!";
+        }
+    }
+
+    async function handleSignUp() {
+        const country = document.getElementById('signup-country').value;
+        const phone = document.getElementById('signup-phone').value.trim();
+        const password = document.getElementById('signup-password').value.trim();
+        const errorDiv = document.getElementById('signup-error');
+
+        if (!phone || !password) {
+            errorDiv.innerText = "Zəhmət olmasa xanaları tam doldurun!";
+            return;
+        }
+
+        if (password.length < 8) {
+            errorDiv.innerText = "Şifrə ən azı 8 simvoldan ibarət olmalıdır!";
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: country + phone, password })
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                errorDiv.innerText = data.error || "Qeydiyyat xətası!";
+                return;
+            }
+
+            localStorage.setItem('taxi_user', country + phone);
+            showPage('comparison-view');
+            getCurrentLocation();
+        } catch (err) {
+            errorDiv.innerText = "Serverlə əlaqə qurulmadı!";
+        }
+    }
+
+    function searchLocation(type) {
+        clearTimeout(searchTimeout);
+        const input = document.getElementById(type);
+        const query = input.value.trim();
+        const suggestionsBox = document.getElementById(`${type}-suggestions`);
+
+        if (type === 'pickup') pickupCoords = null;
+        if (type === 'dropoff') dropoffCoords = null;
+
+        if (query.length < 2) {
+            suggestionsBox.style.display = 'none';
+            return;
+        }
+
+        searchTimeout = setTimeout(async () => {
+            try {
+                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                const results = await response.json();
+
+                if (results && results.length > 0) {
+                    let html = '';
+                    results.forEach(item => {
+                        const safeName = item.name.replace(/'/g, "\\'");
+                        html += `<div class="suggestion-item" onclick="selectLocation('${type}', '${safeName}', ${item.lat}, ${item.lon})">${item.name}</div>`;
+                    });
+                    suggestionsBox.innerHTML = html;
+                    suggestionsBox.style.display = 'block';
+                } else {
+                    suggestionsBox.style.display = 'none';
+                }
+            } catch (error) {
+                console.error("Axtarış xətası:", error);
+            }
+        }, 300);
+    }
+
+    function selectLocation(type, name, lat, lon) {
+        document.getElementById(type).value = name;
+        document.getElementById(`${type}-suggestions`).style.display = 'none';
+
+        if (type === 'pickup') {
+            pickupCoords = { lat, lon };
+        } else {
+            dropoffCoords = { lat, lon };
+        }
+    }
+
+    function getCurrentLocation() {
+        const input = document.getElementById('pickup');
+        if (navigator.geolocation) {
+            input.value = "Konumunuz təyin olunur...";
+            
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    pickupCoords = { lat, lon };
+                    
+                    try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=tr`);
+                        const data = await res.json();
+                        const addr = data.address;
+                        input.value = addr.road || addr.neighbourhood || addr.suburb || data.display_name.split(',')[0];
+                    } catch {
+                        input.value = `Konum (${lat.toFixed(3)}, ${lon.toFixed(3)})`;
+                    }
+                },
+                (err) => {
+                    input.value = "";
+                    input.placeholder = "Piyalepaşa Bulvarı...";
+                },
+                { enableHighAccuracy: true, timeout: 8000 }
+            );
+        }
+    }
+
+    async function fetchCoordsByName(name) {
+        try {
+            const res = await fetch(`/api/search?q=${encodeURIComponent(name)}`);
+            const results = await res.json();
+            if (results && results.length > 0) {
+                return { lat: results[0].lat, lon: results[0].lon };
+            }
+            return null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function selectService(serviceKey, element) {
+        selectedServiceKey = serviceKey;
+        
+        // Kartın seçilmə vizual effekti
+        document.querySelectorAll('.card').forEach(card => {
+            card.classList.remove('user-selected');
+        });
+        element.classList.add('user-selected');
+
+        const pickupName = document.getElementById('pickup').value.trim();
+        const dropoffName = document.getElementById('dropoff').value.trim();
+
+        // Ünvanları avtomatik buferə (Clipboard) kopyalayırıq
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(`${pickupName} -> ${dropoffName}`).catch(err => console.log(err));
+        }
+
+        let targetUrl = '';
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+        if (serviceKey === 'uber') {
+            if (isMobile && pickupCoords && dropoffCoords) {
+                targetUrl = `uber://riderequest?pickup[latitude]=${pickupCoords.lat}&pickup[longitude]=${pickupCoords.lon}&dropoff[latitude]=${dropoffCoords.lat}&dropoff[longitude]=${dropoffCoords.lon}`;
+            } else {
+                targetUrl = `https://m.uber.com/ul/?action=setPickup&pickup[formatted_address]=${encodeURIComponent(pickupName)}&dropoff[formatted_address]=${encodeURIComponent(dropoffName)}`;
+            }
+        } else if (serviceKey === 'yandex') {
+            if (isMobile && pickupCoords && dropoffCoords) {
+                targetUrl = `yandextaxi://route?start-lat=${pickupCoords.lat}&start-lon=${pickupCoords.lon}&end-lat=${dropoffCoords.lat}&end-lon=${dropoffCoords.lon}`;
+            } else {
+                targetUrl = `https://taxi.yandex.com.tr/`;
+            }
+        } else if (serviceKey === 'birtaxi') {
+            if (isMobile) {
+                targetUrl = `bitaksi://`;
+            } else {
+                targetUrl = `https://www.bitaksi.com/`;
+            }
+        }
+
+        // Bizim səhifədə yüklənmə olmadan, yeni tab-da və ya tətbiqdə açır
+        if (targetUrl) {
+            window.open(targetUrl, '_blank');
+        }
+    }
+
+    async function comparePrices() {
+        const resultsDiv = document.getElementById('results');
+        const pickupName = document.getElementById('pickup').value.trim();
+        const dropoffName = document.getElementById('dropoff').value.trim();
+
+        if (!pickupName || !dropoffName) {
+            alert("Zəhmət olmasa həm Haradan, həm də Haraya yerlərini qeyd edin!");
+            return;
+        }
+
+        resultsDiv.innerHTML = "<p style='text-align:center; color:#ffcc00; font-weight:bold; margin-top:15px;'>Məsafə və xidmət vaxtları hesablanır...</p>";
+
+        if (!pickupCoords) {
+            pickupCoords = await fetchCoordsByName(pickupName);
+        }
+        if (!dropoffCoords) {
+            dropoffCoords = await fetchCoordsByName(dropoffName);
+        }
+
+        if (!pickupCoords || !dropoffCoords) {
+            resultsDiv.innerHTML = "<p style='color:#ef4444; text-align:center; margin-top:15px;'>Daxil edilən ünvan tapılmadı. Zəhmət olmasa daha dəqiq yazın.</p>";
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/compare', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    startCoord: pickupCoords, 
+                    endCoord: dropoffCoords,
+                    pickupName,
+                    dropoffName
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                resultsDiv.innerHTML = `<p style='color:#ef4444; text-align:center; margin-top:15px;'>${data.error}</p>`;
+                return;
+            }
+
+            const servicesObj = data.services;
+            const servicesArray = Object.entries(servicesObj);
+            
+            const minPrice = Math.min(...servicesArray.map(([key, s]) => parseFloat(s.price)));
+
+            if (!selectedServiceKey) {
+                const cheapestEntry = servicesArray.find(([key, s]) => parseFloat(s.price) === minPrice);
+                if (cheapestEntry) selectedServiceKey = cheapestEntry[0];
+            }
+
+            let html = `
+                <div style="background:#f8fafc; padding:10px 14px; border-radius:12px; margin-bottom:14px; text-align:center; border:1px solid #e2e8f0;">
+                    <span style="font-size:12px; color:#475569; display:block;">Məsafə: <b>${data.distanceKm} km</b> | Səyahət müddəti: <b>~${data.tripDurationMinutes} dəq</b></span>
+                </div>
+            `;
+
+            servicesArray.forEach(([key, service]) => {
+                const isCheapest = parseFloat(service.price) === minPrice;
+                const isSelected = selectedServiceKey === key;
+
+                html += `
+                    <div class="card ${isSelected ? 'user-selected' : ''}" onclick="selectService('${key}', this)">
+                        <div style="flex:1;">
+                            <div class="service-name">${service.name} ${isCheapest ? '<span class="cheapest-tag">Ən ucuz</span>' : ''}</div>
+                            <div class="time-info">
+                                <span>🚕 Qapıya gəlir: <b>~${service.pickupEta} dəq</b></span>
+                                <span style="margin-left:10px;">⏱️ Mənzilə çatır: <b>~${service.tripDuration} dəq</b></span>
+                            </div>
+                        </div>
+                        <div class="price">${service.price} TL</div>
+                    </div>
+                `;
+            });
+
+            resultsDiv.innerHTML = html;
+
+        } catch (error) {
+            resultsDiv.innerHTML = "<p style='color:#ef4444; text-align:center; margin-top:15px;'>Server xətası baş verdi!</p>";
+        }
+    }
+</script>
+</body>
+</html>
